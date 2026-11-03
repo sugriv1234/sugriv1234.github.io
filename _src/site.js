@@ -53,6 +53,23 @@
     });
   });
 
+  /* GA4 events: consultation clicks, outbound works, LinkedIn, article reads */
+  function ev(name, params) { if (typeof w.gtag === 'function') w.gtag('event', name, params || {}); }
+  d.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a'); if (!a) return;
+    var href = a.getAttribute('href') || '';
+    if (/^mailto:/.test(href)) ev('contact_email', { link_text: (a.textContent || '').trim().slice(0, 60), page_location: location.href });
+    else if (/linkedin\.com/.test(href)) ev('contact_linkedin');
+    else if (/\/akwaba-maison\//.test(href)) ev('open_work', { work: 'akwaba_maison' });
+    else if (/\/akwaba\//.test(href)) ev('open_work', { work: 'akwaba_game' });
+    else if (/thenewslens\.com/.test(href)) ev('open_press', { url: href });
+  });
+  [].forEach.call(d.querySelectorAll('.nl-f'), function (f) { f.addEventListener('submit', function () { ev('newsletter_signup'); }); });
+  if (d.querySelector('.art') && 'IntersectionObserver' in w) {
+    var endEl = d.querySelector('.art-tags');
+    if (endEl) { var ro = new IntersectionObserver(function (es) { if (es[0].isIntersecting) { ev('article_read', { article: location.pathname }); ro.disconnect(); } }); ro.observe(endEl); }
+  }
+
   /* column filters */
   var flt = d.querySelector('.flt'), list = d.querySelector('[data-list]');
   if (flt && list) flt.addEventListener('click', function (ev) {

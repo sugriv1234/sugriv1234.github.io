@@ -12,6 +12,7 @@ from content import C, LANGS, PATHS, HREFLANG, LANG_LABEL, DOMAIN, EMAIL, LINKED
 OUT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, ".."))
 VER = "20261103c"
 PAT = json.load(open(os.path.join(HERE, "patterns.json")))
+CFG = json.load(open(os.path.join(HERE, "data", "config.json"), encoding="utf-8"))
 PRESS = json.load(open(os.path.join(HERE, "data", "press.json"), encoding="utf-8"))
 LANG_NAME = {"zh": "中文", "en": "English", "fr": "Français"}
 
@@ -135,6 +136,19 @@ def note_for(slug, lang):
 
 
 # ---------------------------------------------------------------- shared chrome
+def ga_tag():
+    gid = CFG.get("ga4", "").strip()
+    if not gid:
+        return ""
+    return (f'<script async src="https://www.googletagmanager.com/gtag/js?id={gid}"></script>'
+            f"<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}gtag('js',new Date());gtag('config','{gid}');</script>")
+
+
+def gsc_tag():
+    v = CFG.get("googleSiteVerification", "").strip()
+    return f'<meta name="google-site-verification" content="{e(v)}">' if v else ""
+
+
 def head(lang, c, title, desc, url, alts, og_img, og_type="website", ld=None):
     alt_links = "".join(f'<link rel="alternate" hreflang="{HREFLANG[l]}" href="{DOMAIN}{u}">' for l, u in alts.items())
     if "zh" in alts:
@@ -167,6 +181,7 @@ def head(lang, c, title, desc, url, alts, og_img, og_type="website", ld=None):
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400;500&family=IBM+Plex+Mono:wght@400&family=Noto+Serif+TC:wght@400;500;600&family=Noto+Sans+TC:wght@300;400;500{latin}&display=swap">
 <link rel="stylesheet" href="/assets/site.css?v={VER}">
 <script>document.documentElement.classList.add('js')</script>
+{ga_tag()}{gsc_tag()}
 {f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>' if ld else ''}
 </head>"""
 
