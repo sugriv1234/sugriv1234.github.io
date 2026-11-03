@@ -117,6 +117,15 @@ def load_notes():
 NOTES = load_notes()
 
 
+def pillar_name(n, lang):
+    p = n.get("pillar", "")
+    for l in LANGS:
+        names = [t for t, _, _ in C[l]["pillars"]]
+        if p in names:
+            return C[lang]["pillars"][names.index(p)][0]
+    return p
+
+
 def note_for(slug, lang):
     """the version to show a reader of `lang` (fallback: en, then zh)"""
     vs = NOTES[slug]
@@ -193,7 +202,7 @@ def footer(lang, c, alts, idx):
   <div class="band" style="{pat('kita_light')}" aria-hidden="true"></div>
   <div class="wrap ft-g">
     <a class="ft-logo" href="{home(lang)}">VICTOR TSENG</a>
-    <p class="ft-s">{e(c['based'])}</p>
+    <p class="ft-s">{e(c['based'])} · <time data-clock>--:--</time></p>
     <nav class="ft-l" aria-label="{e(c['lang_label'])}">{langsw}</nav>
     <p class="ft-c">© 2026 Victor Tseng 曾浩瑜 · VicTseng Consult</p>
   </div>
@@ -245,13 +254,53 @@ def person_ld(lang, c):
             "sameAs": [LINKEDIN, DOMAIN + "/akwaba-maison/", DOMAIN + "/akwaba/"]}
 
 
+def stat_li(n, t):
+    m = re.match(r"^(\D*)(\d[\d,]*)(.*)$", n)
+    pre, num, suf = m.group(1), m.group(2).replace(",", ""), m.group(3)
+    pre_h = f'<small>{e(pre)}</small>' if pre and not pre.isascii() else e(pre)
+    suf_h = f'<small>{e(suf)}</small>' if suf and not suf.isascii() else e(suf)
+    return f'<li class="rv"><b data-count="{num}">{pre_h}<span class="v">{e(m.group(2))}</span>{suf_h}</b><span>{e(t)}</span></li>'
+
+
 def note_row(n, lang, c):
     badge = f'<span class="badge">{LANG_LABEL[n["lang"]]}</span>' if n["lang"] != lang else ""
     return f"""<li class="rv"><a class="row" href="{note_path(n['lang'], n['slug'])}">
-      <span class="row-m"><time datetime="{n['date']}">{fmt_date(n['date'], lang)}</time><span>{e(n.get('pillar', ''))}</span><span>{n['mins']} {e(c['min_read'])}</span>{badge}</span>
+      <span class="row-m"><time datetime="{n['date']}">{fmt_date(n['date'], lang)}</time><span>{e(pillar_name(n, lang))}</span><span>{n['mins']} {e(c['min_read'])}</span>{badge}</span>
       <span class="row-t">{e(n['title'])}</span>
       <span class="row-d">{e(n['description'])}</span>
       <span class="row-go">{e(c['read'])} {I_ARROW}</span></a></li>"""
+
+
+def banner(lang, c):
+    return f"""<aside class="bn rv" aria-label="{e(c['b1_k'])}">
+    <div class="wrap"><div class="bn-g">
+      <span class="bn-pat" style="{pat('kita_light')}" aria-hidden="true"></span>
+      <div class="bn-t"><p class="cap">{e(c['b1_k'])}</p><p class="bn-h">{e(c['b1_t'])}</p><p class="bn-d">{e(c['b1_d'])}</p></div>
+      <a class="btn" href="{mailto(c['contact_subject'])}">{e(c['b1_btn'])} {I_ARROW}</a>
+    </div></div>
+  </aside>"""
+
+
+def newsletter(lang, c):
+    opts = "".join(f'<option value="{e(t)}">{e(t)}</option>' for t, _, _ in c["pillars"])
+    return f"""<section class="nl" id="newsletter" aria-label="{e(c['nl_k'])}">
+    <div class="wrap nl-g rv">
+      <div><p class="cap">{e(c['nl_k'])}</p><h2 class="nl-h">{e(c['nl_t'])}</h2><p class="nl-d">{e(c['nl_d'])}</p></div>
+      <form class="nl-f" action="https://formsubmit.co/{EMAIL}" method="POST" data-ajax="https://formsubmit.co/ajax/{EMAIL}" data-ok="{e(c['nl_ok'])}" data-err="{e(c['nl_err'])}">
+        <input type="hidden" name="_subject" value="{e(c['nl_t'])} · victseng.com">
+        <input type="hidden" name="_template" value="table">
+        <input type="hidden" name="_captcha" value="false">
+        <input type="hidden" name="_next" value="{DOMAIN}{PATHS[lang]}#newsletter">
+        <input type="hidden" name="language" value="{lang}">
+        <input type="text" name="_honey" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <label class="fl"><span>{e(c['nl_ph'])}</span><input type="email" name="email" required autocomplete="email" placeholder="name@example.com"></label>
+        <label class="fl"><span>{e(c['nl_int'])}</span><select name="topic"><option value="">—</option>{opts}</select></label>
+        <button class="btn" type="submit">{e(c['nl_btn'])} {I_ARROW}</button>
+        <p class="nl-p">{e(c['nl_privacy'])}</p>
+        <p class="nl-msg" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>"""
 
 
 # ---------------------------------------------------------------- home
@@ -264,8 +313,7 @@ def home_page(lang):
     doms = "".join(f'<li><a href="#x-{i+1}"><span class="n">{i+1:02d}</span><span class="t">{e(d)}</span>{I_ARROW}</a></li>' for i, d in enumerate(c["domains"]))
     mq_items = "".join(f"<span>{e(x)}</span><i>✦</i>" for x in c["marquee"])
     stats = "".join(
-        f'<li class="rv"><b data-count="{re.sub("[^0-9]", "", n)}" data-suffix="{e(re.sub("[0-9]", "", n))}">{e(n)}</b><span>{e(t)}</span></li>'
-        for n, t in c["stats"])
+        stat_li(n, t) for n, t in c["stats"])
     pillars = "".join(f"""
       <li class="pl rv" id="x-{i+1}">
         <span class="pl-n">{i+1:02d}</span>
@@ -274,8 +322,8 @@ def home_page(lang):
         <p class="pl-s">{' <i>·</i> '.join(e(s) for s in tags)}</p>
       </li>""" for i, (t, l, tags) in enumerate(c["pillars"]))
     works = "".join(f"""
-      <a class="wk rv" href="{w['url']}">
-        <span class="wk-b" style="{pat(w['pat'] + '_dark')}" aria-hidden="true"></span>
+      <a class="wk wk-{w['tone']} rv" href="{w['url']}">
+        <span class="wk-b" style="{pat(w['pat'] + ('_light' if w['tone'] == 'ivory' else '_color'))}" aria-hidden="true"></span>
         <span class="wk-in">
           <span class="cap">{e(w['sub'])}</span>
           <span class="wk-t">{e(w['name'])}</span>
@@ -284,7 +332,12 @@ def home_page(lang):
           <span class="wk-go">{e(w['cta'])} {I_ARROW}</span>
         </span>
       </a>""" for w in c["works"])
-    notes = "".join(note_row(note_for(s, lang), lang, c) for s in list(NOTES)[:3])
+    picked, seen = [], set()
+    for s_ in NOTES:
+        pn = pillar_name(note_for(s_, lang), lang)
+        if pn not in seen:
+            seen.add(pn); picked.append(s_)
+    notes = "".join(note_row(note_for(s_, lang), lang, c) for s_ in picked[:4])
     press = "".join(f"""<li class="rv"><a class="row" href="{p['url']}" target="_blank" rel="noopener">
       <span class="row-m"><time datetime="{p['date']}">{fmt_date(p['date'], lang)}</time><span>{e(p['outlet'][lang])}</span>{f'<span class="badge">{LANG_LABEL[p["lang"]]}</span>' if p['lang'] != lang else ''}</span>
       <span class="row-t">{e(p['title'][lang])}</span>
@@ -305,12 +358,8 @@ def home_page(lang):
 <main id="main">
   <section class="hero">
     <div class="wrap hero-g">
-      <p class="meta"><span class="dot" aria-hidden="true"></span>ABIDJAN<span class="co"> · 5°20′N 4°01′W</span> · {e(c['local_time'])} <time data-clock>--:--</time></p>
       <p class="cap hero-k">Africa × Asia — Cross-cultural</p>
       <h1 class="h1">{lines}</h1>
-      <figure class="arch">
-        <picture><source srcset="/assets/img/victor-tseng.webp" type="image/webp"><img src="/assets/img/victor-tseng.jpg" width="800" height="1000" alt="{e(c['photo_alt'])}" fetchpriority="high"></picture>
-      </figure>
       <div class="hero-who">
         <p class="who"><strong>{e(c['who'])}</strong><span>{e(c['role'])}</span></p>
         <p class="one">{e(c['one'])}</p>
@@ -319,6 +368,9 @@ def home_page(lang):
           <a class="tl" href="#work">{e(c['cta2'])} {I_ARROW}</a>
         </div>
       </div>
+      <figure class="arch">
+        <picture><source srcset="/assets/img/victor-tseng.webp" type="image/webp"><img src="/assets/img/victor-tseng.jpg" width="800" height="1000" alt="{e(c['photo_alt'])}" fetchpriority="high"></picture>
+      </figure>
       <ul class="doms">{doms}</ul>
     </div>
   </section>
@@ -334,6 +386,8 @@ def home_page(lang):
     </div>
   </section>
 
+  {banner(lang, c)}
+
   <section id="work" class="sec dark">
     <div class="wrap">{sh(2, c['sec_work'], c['sec_work_t'], c['work_note'])}
       <div class="wks">{works}
@@ -345,9 +399,11 @@ def home_page(lang):
     <div class="wrap">{sh(3, c['sec_notes'], c['sec_notes_t'], c['notes_note'])}
       <ul class="rows">{notes}
       </ul>
-      <a class="tl more-l" href="{notes_path(lang)}">{e(c['notes_all'])} {I_ARROW}</a>
+      <a class="tl more-l" href="{notes_path(lang)}">{e(c['notes_all'])} · {len(NOTES)} {e(c['n_articles'])} {I_ARROW}</a>
     </div>
   </section>
+
+  {newsletter(lang, c)}
 
   <section id="press" class="sec alt">
     <div class="wrap">{sh(4, c['sec_press'], c['sec_press_t'], c['press_note'])}
@@ -392,7 +448,12 @@ def home_page(lang):
 def notes_index(lang):
     c = L(lang)
     alts = {l: notes_path(l) for l in LANGS}
-    rows = "".join(note_row(note_for(s, lang), lang, c) for s in NOTES)
+    rows = "".join(note_row(note_for(s, lang), lang, c).replace('<li class="rv">', f'<li class="rv" data-p="{e(pillar_name(note_for(s, lang), lang))}">', 1) for s in NOTES)
+    pills = sorted({pillar_name(note_for(s, lang), lang) for s in NOTES} - {""})
+    order = [t for t, _, _ in c["pillars"]]
+    pills = sorted(pills, key=lambda x: order.index(x) if x in order else 99)
+    filt = f'<div class="flt" role="group"><button type="button" class="on" data-f="">{e(c["all_cat"])} <span>{len(NOTES)}</span></button>' + "".join(
+        f'<button type="button" data-f="{e(p)}">{e(p)} <span>{sum(1 for s in NOTES if pillar_name(note_for(s, lang), lang) == p)}</span></button>' for p in pills) + "</div>"
     ld = {"@context": "https://schema.org", "@type": "CollectionPage", "name": c["notes_page_t"], "url": DOMAIN + notes_path(lang),
           "inLanguage": c["html_lang"], "author": {"@id": DOMAIN + "/#victor"}}
     body = f"""
@@ -400,9 +461,11 @@ def notes_index(lang):
   <div class="wrap">
     <nav class="crumb"><a href="{home(lang)}">{e(c['back'])}</a><span>/</span><span>{e(c['sec_notes_t'])}</span></nav>
     <header class="sh pg-h"><p class="sh-k">{e(c['sec_notes'])}</p><h1>{e(c['notes_page_t'])}</h1><p class="sh-n">{e(c['notes_note'])}</p></header>
-    <ul class="rows">{rows}</ul>
+    {filt}
+    <ul class="rows" data-list>{rows}</ul>
   </div>
-</main>"""
+</main>
+{newsletter(lang, c)}"""
     return (head(lang, c, f"{c['notes_page_t']}｜Victor Tseng 曾浩瑜", c["notes_page_d"], notes_path(lang), alts, f"/assets/img/og-{lang}.jpg", "website", ld)
             + header(lang, c, alts, False) + body + footer(lang, c, alts, search_index(lang, c)))
 
@@ -425,7 +488,7 @@ def note_page(slug, lang):
   <article class="wrap art">
     <nav class="crumb"><a href="{home(lang)}">{e(c['back'])}</a><span>/</span><a href="{notes_path(lang)}">{e(c['sec_notes_t'])}</a></nav>
     <header class="art-h">
-      <p class="sh-k">{e(n.get('pillar', ''))}</p>
+      <p class="sh-k">{e(pillar_name(n, lang))}</p>
       <h1>{e(n['title'])}</h1>
       <p class="art-m"><span>{e(c['by'])} Victor Tseng 曾浩瑜</span><time datetime="{n['date']}">{fmt_date(n['date'], lang)}</time><span>{n['mins']} {e(c['min_read'])}</span></p>
       {avail}
@@ -437,7 +500,8 @@ def note_page(slug, lang):
       <a class="btn" href="{mailto(c['contact_subject'] + ' · ' + n['title'])}">{e(c['note_cta'])} {I_ARROW}</a>
     </aside>
   </article>
-</main>"""
+</main>
+{newsletter(lang, c)}"""
     return (head(lang, c, f"{n['title']}｜Victor Tseng", n["description"], note_path(lang, slug), alts, f"/assets/img/og-{lang}.jpg", "article", ld)
             + header(lang, c, alts, False) + body + footer(lang, c, alts, search_index(lang, c)))
 

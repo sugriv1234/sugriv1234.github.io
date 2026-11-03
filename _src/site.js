@@ -6,8 +6,8 @@
   requestAnimationFrame(function () { setTimeout(function () { var h = d.querySelector('.hero'); if (h) h.classList.add('ld'); }, 60); });
 
   /* Abidjan clock (GMT+0) */
-  var clk = d.querySelector('[data-clock]');
-  function tick() { if (!clk) return; var n = new Date(); clk.textContent = ('0' + n.getUTCHours()).slice(-2) + ':' + ('0' + n.getUTCMinutes()).slice(-2) + ' GMT'; }
+  var clks = d.querySelectorAll('[data-clock]');
+  function tick() { var n = new Date(), t = ('0' + n.getUTCHours()).slice(-2) + ':' + ('0' + n.getUTCMinutes()).slice(-2) + ' GMT'; [].forEach.call(clks, function (c) { c.textContent = t; }); }
   tick(); setInterval(tick, 20000);
 
   /* scroll progress + gentle arch parallax */
@@ -23,17 +23,44 @@
 
   /* count-up numbers */
   function countUp(el) {
-    var target = parseInt(el.getAttribute('data-count'), 10), suf = el.getAttribute('data-suffix') || '';
-    if (!target || reduce) return;
-    var t0 = null, dur = 1400;
+    var target = parseInt(el.getAttribute('data-count'), 10), v0 = el.querySelector('.v');
+    if (!target || reduce || el._done || !v0) return; el._done = true;
+    var t0 = null, dur = 2600;
+    function fmt(v) { return v >= 1000 ? v.toLocaleString('en-US') : String(v); }
     function step(t) {
       if (!t0) t0 = t;
-      var p = Math.min(1, (t - t0) / dur), v = Math.round(target * (1 - Math.pow(1 - p, 3)));
-      el.textContent = v + suf;
+      var p = Math.min(1, (t - t0) / dur);
+      v0.textContent = fmt(Math.round(target * (1 - Math.pow(1 - p, 4))));
       if (p < 1) requestAnimationFrame(step);
     }
-    el.textContent = '0' + suf; requestAnimationFrame(step);
+    v0.textContent = '0'; requestAnimationFrame(step);
   }
+
+  /* newsletter (FormSubmit) */
+  [].forEach.call(d.querySelectorAll('.nl-f'), function (f) {
+    f.addEventListener('submit', function (ev) {
+      if (!w.fetch) return;
+      ev.preventDefault();
+      var msg = f.querySelector('.nl-msg'), btn = f.querySelector('button[type=submit]');
+      if (f._honey && f._honey.value) return;
+      var data = {}; [].forEach.call(f.elements, function (x) { if (x.name) data[x.name] = x.value; });
+      btn.disabled = true; msg.textContent = '…';
+      fetch(f.getAttribute('data-ajax'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(data) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return r.ok && String(j.success) !== 'false'; }); })
+        .then(function (ok) { msg.textContent = ok ? f.getAttribute('data-ok') : f.getAttribute('data-err'); if (ok) f.reset(); })
+        .catch(function () { msg.textContent = f.getAttribute('data-err'); })
+        .then(function () { btn.disabled = false; });
+    });
+  });
+
+  /* column filters */
+  var flt = d.querySelector('.flt'), list = d.querySelector('[data-list]');
+  if (flt && list) flt.addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    [].forEach.call(flt.children, function (x) { x.classList.toggle('on', x === b); });
+    var f = b.getAttribute('data-f');
+    [].forEach.call(list.children, function (li) { li.hidden = !!f && li.getAttribute('data-p') !== f; if (!li.hidden) li.classList.add('in'); });
+  });
 
   var links = [].slice.call(d.querySelectorAll('.an a[data-sec]'));
   var navIn = d.querySelector('.an-in');
