@@ -43,7 +43,7 @@
       ev.preventDefault();
       var msg = f.querySelector('.nl-msg'), btn = f.querySelector('button[type=submit]');
       if (f._honey && f._honey.value) return;
-      var data = {}; [].forEach.call(f.elements, function (x) { if (x.name) data[x.name] = x.value; });
+      var data = {}; [].forEach.call(f.elements, function (x) { if (!x.name) return; if (x.type === 'checkbox') { if (x.checked) data[x.name] = data[x.name] ? data[x.name] + ', ' + x.value : x.value; } else data[x.name] = x.value; });
       btn.disabled = true; msg.textContent = '…';
       fetch(f.getAttribute('data-ajax'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(data) })
         .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return r.ok && String(j.success) !== 'false'; }); })

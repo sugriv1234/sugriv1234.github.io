@@ -222,3 +222,68 @@ BANNERS = {
 }
 for _l in LANGS:
     C[_l].update(BANNERS[_l])
+
+CAT_KEYS = ["art", "lifestyle", "cross-cultural", "business"]
+CAT_PAT = {"art": "korhogo_light", "lifestyle": "kita_light", "cross-cultural": "dida_light", "business": "akan_light"}
+CAT_MOTIF = {  # which documented Ivorian motif each category uses (from AKWABA's sourced motif set)
+    "zh": {"art": "Korhogo 手繪布的魚紋", "lifestyle": "窄幅手織布", "cross-cultural": "Dida 紮染布的圓紋", "business": "Akan 金砝碼紋"},
+    "en": {"art": "Korhogo cloth fish motif", "lifestyle": "Strip-woven cloth", "cross-cultural": "Dida tie-dye rings", "business": "Akan goldweight motif"},
+    "fr": {"art": "Motif de poisson des toiles de Korhogo", "lifestyle": "Tissage en bandes", "cross-cultural": "Cercles des tissus dida", "business": "Motif des poids à peser l'or akan"},
+}
+
+MORE = {
+    "zh": dict(
+        topics_t="四個分類", read_cat="看這一類的文章", related_t="同一類的其他文章", cat_page_d="「讀懂非洲」專欄的{name}文章：{line}",
+        motif_note="紋樣：{m}",
+        nl_name="怎麼稱呼你", nl_role="你是", nl_company="公司或單位（可不填）", nl_topics="想讀的主題（可複選）",
+        roles=["企業主管或決策者", "創業者", "旅人或收藏者", "學生或研究者", "媒體", "其他"],
+        nl_why="留下稱呼和身分，我寄給你的內容會更對題。",
+        exp_t="在四座城市，學會讀懂市場",
+        route=[("巴黎", "2017"), ("達卡", "2020"), ("台北", "2020"), ("阿比讓", "2026")],
+        highlights=[
+            ("國際組織", "無國界醫生 MSF", "負責多渠道行銷，並主導約 40 人外部合作團隊的營運。", "台北 · 2022–2026"),
+            ("品牌與大型活動", "力譔堂整合行銷", "統籌 5 項整合行銷專案、總預算 €960K，一年完成 17 場展覽與活動。", "台北 · 2021–2022"),
+            ("奢華旅宿", "巴黎麗茲酒店 · 雲朗觀光 · Terrou-Bi Resort", "從巴黎麗茲到達卡的五星度假村，熟悉高端客人的期待。", "巴黎 · 南投 · 達卡"),
+            ("國際市場與夥伴", "法國設計學院 · Funique VR · 維策顧問", "完成 11 國國際標竿研究、開發歐洲策略夥伴；現在在阿比讓推動亞非合作。", "巴黎 · 台北 · 阿比讓"),
+        ],
+        orgs_t="合作與任職過的機構",
+        edu_line="International MBA · IAE Paris-Est　｜　HEC Paris 奢侈品管理證書　｜　國立中山大學 外國語文學系",
+    ),
+    "en": dict(
+        topics_t="Four topics", read_cat="Read this topic", related_t="More in this topic", cat_page_d="{name} articles in the Reading Africa column: {line}",
+        motif_note="Motif: {m}",
+        nl_name="Your name", nl_role="You are", nl_company="Company or organisation (optional)", nl_topics="Topics you want (choose any)",
+        roles=["Executive or decision-maker", "Entrepreneur", "Traveller or collector", "Student or researcher", "Media", "Other"],
+        nl_why="Your name and role help me send you what's relevant.",
+        exp_t="Four cities, one craft: reading markets",
+        route=[("Paris", "2017"), ("Dakar", "2020"), ("Taipei", "2020"), ("Abidjan", "2026")],
+        highlights=[
+            ("International NGO", "Médecins Sans Frontières", "Multichannel marketing, and led an external partner operation of about 40 people.", "Taipei · 2022–2026"),
+            ("Brands & large events", "CSR-TAIWAN Summit", "Ran five integrated campaigns with €960K in total budget; 17 exhibitions and events in one year.", "Taipei · 2021–2022"),
+            ("Luxury hospitality", "Ritz Paris · LDC Hotels · Terrou-Bi Resort", "From the Ritz in Paris to a five-star resort in Dakar: fluent in what high-end guests expect.", "Paris · Nantou · Dakar"),
+            ("Markets & partnerships", "Institut Français du Design · Funique VR · VicTseng Consult", "An 11-country benchmarking study, European partnerships, and now Asia–Africa work from Abidjan.", "Paris · Taipei · Abidjan"),
+        ],
+        orgs_t="Organisations I have worked with",
+        edu_line="International MBA · IAE Paris-Est　|　HEC Paris, Luxury Management certificate　|　BA Foreign Languages, National Sun Yat-sen University",
+    ),
+    "fr": dict(
+        topics_t="Quatre thèmes", read_cat="Lire ce thème", related_t="Dans le même thème", cat_page_d="Les chroniques « Lire l'Afrique » sur le thème {name} : {line}",
+        motif_note="Motif : {m}",
+        nl_name="Votre nom", nl_role="Vous êtes", nl_company="Entreprise ou organisation (facultatif)", nl_topics="Thèmes souhaités (plusieurs choix)",
+        roles=["Dirigeant ou décideur", "Entrepreneur", "Voyageur ou collectionneur", "Étudiant ou chercheur", "Média", "Autre"],
+        nl_why="Votre nom et votre profil m'aident à vous envoyer l'essentiel.",
+        exp_t="Quatre villes, un métier : lire les marchés",
+        route=[("Paris", "2017"), ("Dakar", "2020"), ("Taipei", "2020"), ("Abidjan", "2026")],
+        highlights=[
+            ("ONG internationale", "Médecins Sans Frontières", "Marketing multicanal et pilotage d'une opération partenaire d'environ 40 personnes.", "Taipei · 2022–2026"),
+            ("Marques et grands événements", "CSR-TAIWAN Summit", "Cinq campagnes intégrées, 960 K€ de budget ; 17 salons et événements en un an.", "Taipei · 2021–2022"),
+            ("Hôtellerie de luxe", "Ritz Paris · LDC Hotels · Terrou-Bi Resort", "Du Ritz à Paris à un resort cinq étoiles à Dakar : les attentes d'une clientèle exigeante.", "Paris · Nantou · Dakar"),
+            ("Marchés et partenariats", "Institut Français du Design · Funique VR · VicTseng Consult", "Un benchmark dans 11 pays, des partenariats en Europe, et aujourd'hui l'Asie–Afrique depuis Abidjan.", "Paris · Taipei · Abidjan"),
+        ],
+        orgs_t="Organisations avec lesquelles j'ai travaillé",
+        edu_line="International MBA · IAE Paris-Est　|　HEC Paris, certificat Luxury Management　|　Licence de langues étrangères, Université Sun Yat-sen",
+    ),
+}
+ORGS = ["Médecins Sans Frontières", "Ritz Paris", "HEC Paris", "IAE Paris-Est", "Institut Français du Design", "Terrou-Bi Resort", "LDC Hotels & Resorts", "Funique VR"]
+for _l in LANGS:
+    C[_l].update(MORE[_l])

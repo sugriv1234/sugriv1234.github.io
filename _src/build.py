@@ -7,7 +7,7 @@ import markdown
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from content import C, LANGS, PATHS, HREFLANG, LANG_LABEL, DOMAIN, EMAIL, LINKEDIN
+from content import C, LANGS, PATHS, HREFLANG, LANG_LABEL, DOMAIN, EMAIL, LINKEDIN, CAT_KEYS, CAT_PAT, CAT_MOTIF, ORGS
 
 OUT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, ".."))
 VER = "20261103c"
@@ -125,6 +125,38 @@ def pillar_name(n, lang):
         if p in names:
             return C[lang]["pillars"][names.index(p)][0]
     return p
+
+
+def cat_idx(n):
+    p = n.get("pillar", "")
+    for l in LANGS:
+        names = [t for t, _, _ in C[l]["pillars"]]
+        if p in names:
+            return names.index(p)
+    return 0
+
+
+def cat_key(n):
+    return CAT_KEYS[cat_idx(n)]
+
+
+def cat_path(lang, key):
+    return notes_path(lang) + "topic/" + key + "/"
+
+
+def cat_count(key):
+    return sum(1 for s in NOTES if cat_key(next(iter(NOTES[s].values()))) == key)
+
+
+def cat_tiles(lang, c):
+    out = []
+    for i, key in enumerate(CAT_KEYS):
+        name, line, _ = c["pillars"][i]
+        out.append(f"""<li class="rv"><a class="ct-t" href="{cat_path(lang, key)}">
+        <span class="ct-m" style="{pat(CAT_PAT[key])}" aria-hidden="true"></span>
+        <span class="ct-b"><span class="ct-n">{i+1:02d}</span><span class="ct-h">{e(name)}</span><span class="ct-c">{cat_count(key)} {e(c['n_articles'])}</span></span>
+        <span class="ct-go">{e(c['read_cat'])} {I_ARROW}</span></a></li>""")
+    return f'<ul class="cts">{"".join(out)}</ul>'
 
 
 def note_for(slug, lang):
@@ -248,10 +280,11 @@ def search_index(lang, c):
         idx.append({"t": n["title"], "s": c["sec_notes_t"], "d": n["description"] + " " + " ".join(n["tags"]) + " " + n["text"][:1500], "h": note_path(n["lang"], slug)})
     for p in PRESS:
         idx.append({"t": p["title"][lang], "s": c["sec_press_t"], "d": p["outlet"][lang] + " " + p["date"], "h": p["url"]})
-    for y, r, o, p_, d in c["jobs"]:
-        idx.append({"t": r, "s": f"{c['sec_exp']} · {o}", "d": f"{o} {p_} {d} {y}", "h": f"{h}#experience"})
-    for y, d, s in c["edu"]:
-        idx.append({"t": d, "s": f"{c['edu_t']} · {s}", "d": s + " " + y, "h": f"{h}#experience"})
+    for k, o, d, wh in c["highlights"]:
+        idx.append({"t": o, "s": f"{c['sec_exp']} · {k}", "d": f"{d} {wh}", "h": f"{h}#experience"})
+    idx.append({"t": c["edu_line"], "s": c["edu_t"], "d": "MBA IAE HEC", "h": f"{h}#experience"})
+    for i, key in enumerate(CAT_KEYS):
+        idx.append({"t": c["pillars"][i][0], "s": c["sec_notes_t"], "d": c["pillars"][i][1], "h": cat_path(lang, key)})
     idx.append({"t": c["contact_t"], "s": c["sec_contact"], "d": EMAIL + " LinkedIn email " + c["email_btn"], "h": f"{h}#contact"})
     return idx
 
@@ -297,10 +330,11 @@ def banner(lang, c):
 
 
 def newsletter(lang, c):
-    opts = "".join(f'<option value="{e(t)}">{e(t)}</option>' for t, _, _ in c["pillars"])
+    roles = "".join(f'<option value="{e(r)}">{e(r)}</option>' for r in c["roles"])
+    checks = "".join(f'<label><input type="checkbox" name="topics" value="{e(t)}"><span>{e(t)}</span></label>' for t, _, _ in c["pillars"])
     return f"""<section class="nl" id="newsletter" aria-label="{e(c['nl_k'])}">
     <div class="wrap nl-g rv">
-      <div><p class="cap">{e(c['nl_k'])}</p><h2 class="nl-h">{e(c['nl_t'])}</h2><p class="nl-d">{e(c['nl_d'])}</p></div>
+      <div><p class="cap">{e(c['nl_k'])}</p><h2 class="nl-h">{e(c['nl_t'])}</h2><p class="nl-d">{e(c['nl_d'])}</p><p class="nl-d">{e(c['nl_why'])}</p></div>
       <form class="nl-f" action="https://formsubmit.co/{EMAIL}" method="POST" data-ajax="https://formsubmit.co/ajax/{EMAIL}" data-ok="{e(c['nl_ok'])}" data-err="{e(c['nl_err'])}">
         <input type="hidden" name="_subject" value="{e(c['nl_t'])} · victseng.com">
         <input type="hidden" name="_template" value="table">
@@ -308,8 +342,15 @@ def newsletter(lang, c):
         <input type="hidden" name="_next" value="{DOMAIN}{PATHS[lang]}#newsletter">
         <input type="hidden" name="language" value="{lang}">
         <input type="text" name="_honey" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-        <label class="fl"><span>{e(c['nl_ph'])}</span><input type="email" name="email" required autocomplete="email" placeholder="name@example.com"></label>
-        <label class="fl"><span>{e(c['nl_int'])}</span><select name="topic"><option value="">—</option>{opts}</select></label>
+        <div class="fr2">
+          <label class="fl"><span>{e(c['nl_name'])} *</span><input type="text" name="name" required autocomplete="name"></label>
+          <label class="fl"><span>{e(c['nl_ph'])} *</span><input type="email" name="email" required autocomplete="email" placeholder="name@example.com"></label>
+        </div>
+        <div class="fr2">
+          <label class="fl"><span>{e(c['nl_role'])} *</span><select name="role" required><option value="">—</option>{roles}</select></label>
+          <label class="fl"><span>{e(c['nl_company'])}</span><input type="text" name="company" autocomplete="organization"></label>
+        </div>
+        <fieldset class="chk"><legend>{e(c['nl_topics'])}</legend>{checks}</fieldset>
         <button class="btn" type="submit">{e(c['nl_btn'])} {I_ARROW}</button>
         <p class="nl-p">{e(c['nl_privacy'])}</p>
         <p class="nl-msg" role="status" aria-live="polite"></p>
@@ -332,9 +373,11 @@ def home_page(lang):
     pillars = "".join(f"""
       <li class="pl rv" id="x-{i+1}">
         <span class="pl-n">{i+1:02d}</span>
+        <span class="pl-m" style="{pat(CAT_PAT[CAT_KEYS[i]])}" aria-hidden="true"></span>
         <h3>{e(t)}</h3>
         <p>{e(l)}</p>
         <p class="pl-s">{' <i>·</i> '.join(e(s) for s in tags)}</p>
+        <a class="pl-a" href="{cat_path(lang, CAT_KEYS[i])}">{e(c['read_cat'])} · {cat_count(CAT_KEYS[i])} {e(c['n_articles'])} {I_ARROW}</a>
       </li>""" for i, (t, l, tags) in enumerate(c["pillars"]))
     works = "".join(f"""
       <a class="wk wk-{w['tone']} rv" href="{w['url']}">
@@ -358,12 +401,9 @@ def home_page(lang):
       <span class="row-t">{e(p['title'][lang])}</span>
       <span class="row-go">{e(p['outlet'][lang])} {I_OUT}</span></a></li>""" for p in PRESS)
 
-    def job(j):
-        y, r, o, p_, d = j
-        return f'<li><span class="y">{e(y)}</span><div><h4>{e(r)}</h4><p class="org">{e(o)} <span>· {e(p_)}</span></p><p class="d">{e(d)}</p></div></li>'
-    jobs = "".join(job(j) for j in c["jobs"][:5])
-    jobs_more = "".join(job(j) for j in c["jobs"][5:])
-    edu = "".join(f'<li><span class="y">{e(y)}</span><div><h4>{e(d)}</h4><p class="org">{e(s)}</p></div></li>' for y, d, s in c["edu"])
+    route = "".join(f'<li><span class="rt-c">{e(ci)}</span><span class="rt-y">{e(y)}</span></li>' for ci, y in c["route"])
+    hls = "".join(f"""<li class="hl rv"><p class="cap">{e(k)}</p><h3>{e(o)}</h3><p class="hl-d">{e(d)}</p><p class="hl-w">{e(wh)}</p></li>""" for k, o, d, wh in c["highlights"])
+    orgs = "".join(f"<li>{e(o)}</li>" for o in ORGS)
     total = len(c["nav"])
 
     def sh(n, kicker, title, note=""):
@@ -412,6 +452,7 @@ def home_page(lang):
 
   <section id="notes" class="sec">
     <div class="wrap">{sh(3, c['sec_notes'], c['sec_notes_t'], c['notes_note'])}
+      {cat_tiles(lang, c)}
       <ul class="rows">{notes}
       </ul>
       <a class="tl more-l" href="{notes_path(lang)}">{e(c['notes_all'])} · {len(NOTES)} {e(c['n_articles'])} {I_ARROW}</a>
@@ -428,20 +469,14 @@ def home_page(lang):
   </section>
 
   <section id="experience" class="sec">
-    <div class="wrap">{sh(5, c['sec_exp'], c['sec_exp_t'])}
-     <div class="ex-g">
-      <div>
-        <ol class="jobs rv">{jobs}</ol>
-        <details class="more"><summary><span>{e(c['more_jobs'])}</span><span class="cnt">+{len(c['jobs'])-5}</span></summary><ol class="jobs">{jobs_more}</ol></details>
+    <div class="wrap">{sh(5, c['sec_exp'], c['exp_t'])}
+      <div class="ex">
+        <ol class="rt rv" aria-label="route">{route}</ol>
+        <ul class="hls">{hls}</ul>
+        <div class="orgs rv"><p class="cap">{e(c['orgs_t'])}</p><ul>{orgs}</ul></div>
+        <div class="ex-f rv"><p class="edu">{e(c['edu_line'])}</p><p class="lgs">{e(c['langs'])}</p>
+          <a class="tl" href="{mailto(c['cv_subject'])}">{e(c['cv'])} {I_ARROW}</a></div>
       </div>
-      <aside class="ex-s rv">
-        <p class="cap">{e(c['edu_t'])}</p>
-        <ol class="jobs sm">{edu}</ol>
-        <p class="cap">{e(c['lang_t'])}</p>
-        <p class="lgs">{e(c['langs'])}</p>
-        <a class="tl" href="{mailto(c['cv_subject'])}">{e(c['cv'])} {I_ARROW}</a>
-      </aside>
-     </div>
     </div>
   </section>
 
@@ -476,12 +511,50 @@ def notes_index(lang):
   <div class="wrap">
     <nav class="crumb"><a href="{home(lang)}">{e(c['back'])}</a><span>/</span><span>{e(c['sec_notes_t'])}</span></nav>
     <header class="sh pg-h"><p class="sh-k">{e(c['sec_notes'])}</p><h1>{e(c['notes_page_t'])}</h1><p class="sh-n">{e(c['notes_note'])}</p></header>
+    {cat_tiles(lang, c)}
     {filt}
     <ul class="rows" data-list>{rows}</ul>
   </div>
 </main>
 {newsletter(lang, c)}"""
     return (head(lang, c, f"{c['notes_page_t']}｜Victor Tseng 曾浩瑜", c["notes_page_d"], notes_path(lang), alts, f"/assets/img/og-{lang}.jpg", "website", ld)
+            + header(lang, c, alts, False) + body + footer(lang, c, alts, search_index(lang, c)))
+
+
+def related(slug, lang, c):
+    key = cat_key(NOTES[slug][lang])
+    others = [s for s in NOTES if s != slug and cat_key(next(iter(NOTES[s].values()))) == key][:3]
+    if not others:
+        return ""
+    rows = "".join(note_row(note_for(s, lang), lang, c) for s in others)
+    return f'<section class="rel"><p class="sh-k">{e(c["related_t"])}</p><ul class="rows">{rows}</ul><a class="tl more-l" href="{cat_path(lang, key)}">{e(c["read_cat"])} {I_ARROW}</a></section>'
+
+
+def cat_page(lang, key):
+    c = L(lang)
+    i = CAT_KEYS.index(key)
+    name, line, tags = c["pillars"][i]
+    alts = {l: cat_path(l, key) for l in LANGS}
+    items = [s for s in NOTES if cat_key(next(iter(NOTES[s].values()))) == key]
+    rows = "".join(note_row(note_for(s, lang), lang, c) for s in items)
+    others = "".join(f'<a href="{cat_path(lang, k)}"{" aria-current=page" if k == key else ""}>{e(c["pillars"][j][0])}</a>' for j, k in enumerate(CAT_KEYS))
+    ld = {"@context": "https://schema.org", "@type": "CollectionPage", "name": f"{name} · {c['sec_notes_t']}", "url": DOMAIN + cat_path(lang, key),
+          "inLanguage": c["html_lang"], "author": {"@id": DOMAIN + "/#victor"}}
+    body = f"""
+<main id="main" class="page">
+  <div class="cat-hero" style="{pat(CAT_PAT[key])}" aria-hidden="true"></div>
+  <div class="wrap">
+    <nav class="crumb"><a href="{home(lang)}">{e(c['back'])}</a><span>/</span><a href="{notes_path(lang)}">{e(c['sec_notes_t'])}</a></nav>
+    <header class="sh pg-h"><p class="sh-k">{i+1:02d} · {e(c['sec_notes_t'])}</p><h1>{e(name)}</h1><p class="sh-n">{e(line)}</p>
+      <p class="motif-n">{e(c['motif_note'].format(m=CAT_MOTIF[lang][key]))} · {len(items)} {e(c['n_articles'])}</p></header>
+    <nav class="cat-nav">{others}</nav>
+    <ul class="rows">{rows}</ul>
+  </div>
+</main>
+{newsletter(lang, c)}"""
+    title = f"{name}｜{c['sec_notes_t']}｜Victor Tseng"
+    desc = c["cat_page_d"].format(name=name, line=line)
+    return (head(lang, c, title, desc, cat_path(lang, key), alts, f"/assets/img/og-{lang}.jpg", "website", ld)
             + header(lang, c, alts, False) + body + footer(lang, c, alts, search_index(lang, c)))
 
 
@@ -503,13 +576,16 @@ def note_page(slug, lang):
   <article class="wrap art">
     <nav class="crumb"><a href="{home(lang)}">{e(c['back'])}</a><span>/</span><a href="{notes_path(lang)}">{e(c['sec_notes_t'])}</a></nav>
     <header class="art-h">
-      <p class="sh-k">{e(pillar_name(n, lang))}</p>
+      <span class="art-band" style="{pat(CAT_PAT[cat_key(n)])}" aria-hidden="true"></span>
+      <p class="sh-k"><a href="{cat_path(lang, cat_key(n))}">{e(pillar_name(n, lang))}</a></p>
       <h1>{e(n['title'])}</h1>
       <p class="art-m"><span>{e(c['by'])} Victor Tseng 曾浩瑜</span><time datetime="{n['date']}">{fmt_date(n['date'], lang)}</time><span>{n['mins']} {e(c['min_read'])}</span></p>
       {avail}
     </header>
     <div class="prose">{n['html']}</div>
     <ul class="art-tags">{tags}</ul>
+    <p class="motif-n">{e(c['motif_note'].format(m=CAT_MOTIF[lang][cat_key(n)]))}</p>
+    {related(slug, lang, c)}
     <aside class="art-cta">
       <p>{e(c['note_cta_t'])}</p>
       <a class="btn" href="{mailto(c['contact_subject'] + ' · ' + n['title'])}">{e(c['note_cta'])} {I_ARROW}</a>
@@ -532,12 +608,15 @@ urls = []
 for l in LANGS:
     write(PATHS[l] + "index.html", home_page(l)); urls.append(({x: PATHS[x] for x in LANGS}, PATHS[l], None))
     write(notes_path(l) + "index.html", notes_index(l)); urls.append(({x: notes_path(x) for x in LANGS}, notes_path(l), None))
+    for key in CAT_KEYS:
+        write(cat_path(l, key) + "index.html", cat_page(l, key)); urls.append(({x: cat_path(x, key) for x in LANGS}, cat_path(l, key), None))
 for slug, vs in NOTES.items():
     for l in vs:
         write(note_path(l, slug) + "index.html", note_page(slug, l))
         urls.append(({x: note_path(x, slug) for x in vs}, note_path(l, slug), vs[l]["date"]))
 
-write("assets/site.css", open(os.path.join(HERE, "site.css"), encoding="utf-8").read())
+_vars = ":root{" + "".join(f"--mt-{k}:url('data:image/svg+xml,{quote(PAT[k + '_light']['svg'])}');" for k in ("modern", "akan", "kita", "dida", "korhogo")) + "}\n"
+write("assets/site.css", _vars + open(os.path.join(HERE, "site.css"), encoding="utf-8").read())
 write("assets/site.js", open(os.path.join(HERE, "site.js"), encoding="utf-8").read())
 
 sm = []
