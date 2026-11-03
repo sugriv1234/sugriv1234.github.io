@@ -13,6 +13,7 @@ OUT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "
 VER = "20261103c"
 PAT = json.load(open(os.path.join(HERE, "patterns.json")))
 CFG = json.load(open(os.path.join(HERE, "data", "config.json"), encoding="utf-8"))
+MAP = json.load(open(os.path.join(HERE, "data", "map.json")))
 PRESS = json.load(open(os.path.join(HERE, "data", "press.json"), encoding="utf-8"))
 LANG_NAME = {"zh": "中文", "en": "English", "fr": "Français"}
 
@@ -254,6 +255,7 @@ def footer(lang, c, alts, idx):
     <p class="ft-c">© 2026 Victor Tseng 曾浩瑜 · VicTseng Consult</p>
   </div>
 </footer>
+<a class="totop" href="#main" aria-label="{e(c['top'])}" title="{e(c['top'])}"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path d="M12 19V5M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></a>
 <div class="sr" role="dialog" aria-modal="true" aria-label="{e(c['search'])}" hidden>
   <div class="sr-box">
     <div class="sr-in">{I_SEARCH}<input type="search" placeholder="{e(c['search_ph'])}" autocomplete="off" aria-label="{e(c['search'])}"><button type="button" data-close-search>{e(c['search_close'])}</button></div>
@@ -319,6 +321,39 @@ def note_row(n, lang, c):
       <span class="row-go">{e(c['read'])} {I_ARROW}</span></a></li>"""
 
 
+def map_svg(lang, c):
+    w, h = MAP["w"], MAP["h"]
+    dots = "".join(f'<circle cx="{x}" cy="{y}" r=".3"/>' for x, y in MAP["dots"])
+    keys = ["paris", "dakar", "taipei", "abidjan"]
+    P = {k: MAP["cities"][k] for k in keys}
+
+    def arc(a, b, lift):
+        (x1, y1), (x2, y2) = P[a], P[b]
+        mx, my = (x1 + x2) / 2, (y1 + y2) / 2 - lift
+        return f'<path class="arc" pathLength="1" d="M{x1} {y1} Q{mx:.2f} {my:.2f} {x2} {y2}"/>'
+    arcs = arc("paris", "dakar", 4) + arc("dakar", "taipei", 14) + arc("taipei", "abidjan", -7)
+    off = {"paris": (1.4, -0.9, "start"), "dakar": (-1.2, -1.6, "middle"), "taipei": (-1.2, -1.6, "end"), "abidjan": (1.6, 2.6, "start")}
+    cities = ""
+    for i, k in enumerate(keys):
+        x, y = P[k]
+        dx, dy, anc = off[k]
+        name, yr = c["route"][i]
+        live = k == "abidjan"
+        pulse = f'<circle class="pulse" cx="{x}" cy="{y}" r="1"/><circle class="pulse p2" cx="{x}" cy="{y}" r="1"/>' if live else ""
+        cls = "city live" if live else "city"
+        r = 0.95 if live else 0.7
+        cities += (f'<g class="{cls}">{pulse}<circle class="pt" cx="{x}" cy="{y}" r="{r}"/>'
+                   f'<text x="{x+dx}" y="{y+dy}" text-anchor="{anc}"><tspan class="cn">{e(name)}</tspan><tspan class="cy" dx=".6">{e(yr)}</tspan></text></g>')
+    labs = "".join(f'<text class="cont" x="{MAP["labels"][k][0]}" y="{MAP["labels"][k][1]}" text-anchor="middle">{e(t)}</text>'
+                   for k, t in zip(("europe", "africa", "asia"), c["conts"]))
+    aria = e(c["map_cap"]) + ": " + e(" → ".join(n for n, _ in c["route"]))
+    ax, ay = P["abidjan"]
+    return (f'<figure class="map rv"><svg viewBox="-1 -1 {w+2} {h+2}" role="img" aria-label="{aria}">'
+            '<defs><radialGradient id="glow"><stop offset="0" stop-color="#C9A86A" stop-opacity=".9"/><stop offset="1" stop-color="#C9A86A" stop-opacity="0"/></radialGradient></defs>'
+            f'<g class="dots">{dots}</g>{labs}<g class="arcs">{arcs}</g><circle class="halo" cx="{ax}" cy="{ay}" r="4.5" fill="url(#glow)"/>{cities}</svg>'
+            f'<figcaption>{e(c["map_cap"])}</figcaption></figure>')
+
+
 def banner(lang, c):
     return f"""<aside class="bn rv" aria-label="{e(c['b1_k'])}">
     <div class="wrap"><div class="bn-g">
@@ -335,7 +370,7 @@ def newsletter(lang, c):
     return f"""<section class="nl" id="newsletter" aria-label="{e(c['nl_k'])}">
     <div class="wrap nl-g rv">
       <div><p class="cap">{e(c['nl_k'])}</p><h2 class="nl-h">{e(c['nl_t'])}</h2><p class="nl-d">{e(c['nl_d'])}</p><p class="nl-d">{e(c['nl_why'])}</p></div>
-      <form class="nl-f" action="https://formsubmit.co/{EMAIL}" method="POST" data-ajax="https://formsubmit.co/ajax/{EMAIL}" data-ok="{e(c['nl_ok'])}" data-err="{e(c['nl_err'])}">
+      <form class="nl-f" action="https://formsubmit.co/{EMAIL}" method="POST" data-ajax="https://formsubmit.co/ajax/{EMAIL}" data-ok="{e(c['nl_ok'])}" data-err="{e(c['nl_err'])}" data-sending="{e(c['nl_sending'])}">
         <input type="hidden" name="_subject" value="{e(c['nl_t'])} · victseng.com">
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_captcha" value="false">
@@ -427,6 +462,7 @@ def home_page(lang):
         <picture><source srcset="/assets/img/victor-tseng.webp" type="image/webp"><img src="/assets/img/victor-tseng.jpg" width="800" height="1000" alt="{e(c['photo_alt'])}" fetchpriority="high"></picture>
       </figure>
       <ul class="doms">{doms}</ul>
+      <a class="cue" href="#expertise"><span>{e(c['scroll'])}</span><i aria-hidden="true"></i></a>
     </div>
   </section>
 
@@ -471,7 +507,7 @@ def home_page(lang):
   <section id="experience" class="sec">
     <div class="wrap">{sh(5, c['sec_exp'], c['exp_t'])}
       <div class="ex">
-        <ol class="rt rv" aria-label="route">{route}</ol>
+        {map_svg(lang, c)}
         <ul class="hls">{hls}</ul>
         <div class="orgs rv"><p class="cap">{e(c['orgs_t'])}</p><ul>{orgs}</ul></div>
         <div class="ex-f rv"><p class="edu">{e(c['edu_line'])}</p><p class="lgs">{e(c['langs'])}</p>

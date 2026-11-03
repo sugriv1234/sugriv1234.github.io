@@ -287,3 +287,11 @@ MORE = {
 ORGS = ["Médecins Sans Frontières", "Ritz Paris", "HEC Paris", "IAE Paris-Est", "Institut Français du Design", "Terrou-Bi Resort", "LDC Hotels & Resorts", "Funique VR"]
 for _l in LANGS:
     C[_l].update(MORE[_l])
+
+UX = {
+    "zh": dict(scroll="往下探索", top="回到頂部", map_cap="三大洲・四座城市", conts=("歐洲", "非洲", "亞洲"), nl_sending="送出中…"),
+    "en": dict(scroll="Scroll to explore", top="Back to top", map_cap="Three continents, four cities", conts=("EUROPE", "AFRICA", "ASIA"), nl_sending="Sending…"),
+    "fr": dict(scroll="Découvrir", top="Haut de page", map_cap="Trois continents, quatre villes", conts=("EUROPE", "AFRIQUE", "ASIE"), nl_sending="Envoi…"),
+}
+for _l in LANGS:
+    C[_l].update(UX[_l])

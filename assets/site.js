@@ -1,5 +1,6 @@
 (function () {
   var d = document, w = window;
+  function ev(name, params) { if (typeof w.gtag === 'function') w.gtag('event', name, params || {}); }
   var reduce = w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* hero entrance */
@@ -11,9 +12,11 @@
   tick(); setInterval(tick, 20000);
 
   /* scroll progress + gentle arch parallax */
-  var bar = d.querySelector('.prog i'), arch = d.querySelector('.arch img'), ticking = false;
+  var cue = d.querySelector('.cue'), tt = d.querySelector('.totop'), bar = d.querySelector('.prog i'), arch = d.querySelector('.arch img'), ticking = false;
   function onScroll() {
     var h = d.documentElement, max = h.scrollHeight - h.clientHeight;
+    if (tt) tt.classList.toggle('on', h.scrollTop > 700);
+    if (cue) cue.classList.toggle('off', h.scrollTop > 160);
     if (bar) bar.style.transform = 'scaleX(' + (max > 0 ? h.scrollTop / max : 0) + ')';
     if (arch && !reduce) { var y = Math.min(h.scrollTop, 700); arch.style.transform = 'translateY(' + (y * 0.06) + 'px) scale(' + (1 + y * 0.00012) + ')'; }
     ticking = false;
@@ -44,17 +47,20 @@
       var msg = f.querySelector('.nl-msg'), btn = f.querySelector('button[type=submit]');
       if (f._honey && f._honey.value) return;
       var data = {}; [].forEach.call(f.elements, function (x) { if (!x.name) return; if (x.type === 'checkbox') { if (x.checked) data[x.name] = data[x.name] ? data[x.name] + ', ' + x.value : x.value; } else data[x.name] = x.value; });
-      btn.disabled = true; msg.textContent = '…';
+      btn.disabled = true; msg.textContent = f.getAttribute('data-sending') || '…';
       fetch(f.getAttribute('data-ajax'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(data) })
-        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return r.ok && String(j.success) !== 'false'; }); })
-        .then(function (ok) { msg.textContent = ok ? f.getAttribute('data-ok') : f.getAttribute('data-err'); if (ok) f.reset(); })
-        .catch(function () { msg.textContent = f.getAttribute('data-err'); })
+        .then(function (r) { return r.json().catch(function () { return { success: r.ok }; }); })
+        .then(function (j) {
+          var ok = j && String(j.success) === 'true';
+          if (ok) { msg.textContent = f.getAttribute('data-ok'); f.reset(); ev('newsletter_signup'); }
+          else { msg.textContent = (j && j.message) ? j.message : f.getAttribute('data-err'); }
+        })
+        .catch(function () { HTMLFormElement.prototype.submit.call(f); })
         .then(function () { btn.disabled = false; });
     });
   });
 
-  /* GA4 events: consultation clicks, outbound works, LinkedIn, article reads */
-  function ev(name, params) { if (typeof w.gtag === 'function') w.gtag('event', name, params || {}); }
+  /* GA4 events */
   d.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a'); if (!a) return;
     var href = a.getAttribute('href') || '';
@@ -64,7 +70,6 @@
     else if (/\/akwaba\//.test(href)) ev('open_work', { work: 'akwaba_game' });
     else if (/thenewslens\.com/.test(href)) ev('open_press', { url: href });
   });
-  [].forEach.call(d.querySelectorAll('.nl-f'), function (f) { f.addEventListener('submit', function () { ev('newsletter_signup'); }); });
   if (d.querySelector('.art') && 'IntersectionObserver' in w) {
     var endEl = d.querySelector('.art-tags');
     if (endEl) { var ro = new IntersectionObserver(function (es) { if (es[0].isIntersecting) { ev('article_read', { article: location.pathname }); ro.disconnect(); } }); ro.observe(endEl); }
