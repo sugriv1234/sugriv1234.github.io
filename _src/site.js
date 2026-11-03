@@ -1,36 +1,71 @@
 (function () {
-  var d = document;
+  var d = document, w = window;
+  var reduce = w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* Abidjan local time (GMT+0) */
+  /* hero entrance */
+  requestAnimationFrame(function () { setTimeout(function () { var h = d.querySelector('.hero'); if (h) h.classList.add('ld'); }, 60); });
+
+  /* Abidjan clock (GMT+0) */
   var clk = d.querySelector('[data-clock]');
-  function tick() {
-    if (!clk) return;
-    var n = new Date();
-    clk.textContent = ('0' + n.getUTCHours()).slice(-2) + ':' + ('0' + n.getUTCMinutes()).slice(-2);
-  }
+  function tick() { if (!clk) return; var n = new Date(); clk.textContent = ('0' + n.getUTCHours()).slice(-2) + ':' + ('0' + n.getUTCMinutes()).slice(-2) + ' GMT'; }
   tick(); setInterval(tick, 20000);
 
-  /* active anchor in the section bar */
+  /* scroll progress + gentle arch parallax */
+  var bar = d.querySelector('.prog i'), arch = d.querySelector('.arch img'), ticking = false;
+  function onScroll() {
+    var h = d.documentElement, max = h.scrollHeight - h.clientHeight;
+    if (bar) bar.style.transform = 'scaleX(' + (max > 0 ? h.scrollTop / max : 0) + ')';
+    if (arch && !reduce) { var y = Math.min(h.scrollTop, 700); arch.style.transform = 'translateY(' + (y * 0.06) + 'px) scale(' + (1 + y * 0.00012) + ')'; }
+    ticking = false;
+  }
+  w.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
+  onScroll();
+
+  /* count-up numbers */
+  function countUp(el) {
+    var target = parseInt(el.getAttribute('data-count'), 10), suf = el.getAttribute('data-suffix') || '';
+    if (!target || reduce) return;
+    var t0 = null, dur = 1400;
+    function step(t) {
+      if (!t0) t0 = t;
+      var p = Math.min(1, (t - t0) / dur), v = Math.round(target * (1 - Math.pow(1 - p, 3)));
+      el.textContent = v + suf;
+      if (p < 1) requestAnimationFrame(step);
+    }
+    el.textContent = '0' + suf; requestAnimationFrame(step);
+  }
+
   var links = [].slice.call(d.querySelectorAll('.an a[data-sec]'));
-  var bar = d.querySelector('.an-in');
-  if ('IntersectionObserver' in window && links.length) {
-    var io = new IntersectionObserver(function (es) {
+  var navIn = d.querySelector('.an-in');
+  var isHome = d.body.classList.contains('is-home');
+
+  if ('IntersectionObserver' in w) {
+    /* reveal with stagger */
+    var rv = new IntersectionObserver(function (es) {
       es.forEach(function (en) {
         if (!en.isIntersecting) return;
-        links.forEach(function (a) {
-          var on = a.getAttribute('data-sec') === en.target.id;
-          a.classList.toggle('on', on);
-          if (on && bar) bar.scrollTo({ left: a.offsetLeft - 16, behavior: 'smooth' });
-        });
+        var el = en.target, sib = el.parentNode ? [].indexOf.call(el.parentNode.children, el) : 0;
+        el.style.transitionDelay = Math.min(sib, 5) * 70 + 'ms';
+        el.classList.add('in'); rv.unobserve(el);
+        [].forEach.call(el.querySelectorAll('[data-count]'), countUp);
       });
-    }, { rootMargin: '-45% 0px -50% 0px' });
-    links.forEach(function (a) { var s = d.getElementById(a.getAttribute('data-sec')); if (s) io.observe(s); });
-
-    /* reveal on scroll */
-    var rv = new IntersectionObserver(function (es) {
-      es.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); rv.unobserve(en.target); } });
-    }, { rootMargin: '0px 0px -8% 0px' });
+    }, { rootMargin: '0px 0px -6% 0px' });
     [].forEach.call(d.querySelectorAll('.rv'), function (el) { rv.observe(el); });
+
+    /* active section in the anchor bar */
+    if (isHome && links.length) {
+      var io = new IntersectionObserver(function (es) {
+        es.forEach(function (en) {
+          if (!en.isIntersecting) return;
+          links.forEach(function (a) {
+            var on = a.getAttribute('data-sec') === en.target.id;
+            a.classList.toggle('on', on);
+            if (on && navIn && navIn.scrollWidth > navIn.clientWidth) navIn.scrollTo({ left: a.offsetLeft - 20, behavior: 'smooth' });
+          });
+        });
+      }, { rootMargin: '-40% 0px -55% 0px' });
+      links.forEach(function (a) { var s = d.getElementById(a.getAttribute('data-sec')); if (s) io.observe(s); });
+    }
   } else {
     [].forEach.call(d.querySelectorAll('.rv'), function (el) { el.classList.add('in'); });
   }
@@ -40,39 +75,26 @@
   var idx = [];
   try { idx = JSON.parse(d.getElementById('sidx').textContent); } catch (e) {}
   var norm = function (s) { return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
-  idx.forEach(function (it) { it.n = norm(it.t + ' ' + it.s + ' ' + it.d); });
+  idx.forEach(function (it) { it.n = norm(it.t + ' ' + it.s + ' ' + it.d); it.nt = norm(it.t); });
   var last = null;
-
   function render(q) {
-    q = norm(q.trim());
-    res.innerHTML = '';
+    q = norm(q.trim()); res.innerHTML = '';
     if (!q) return;
     var terms = q.split(/\s+/);
-    var hits = idx.filter(function (it) { return terms.every(function (t) { return it.n.indexOf(t) > -1; }); }).slice(0, 12);
-    if (!hits.length) { res.innerHTML = '<li class="sr-none">' + (window.UI && UI.none || '—') + '</li>'; return; }
-    hits.forEach(function (it, i) {
-      var li = d.createElement('li');
-      var a = d.createElement('a');
-      a.href = it.h; a.setAttribute('role', 'option');
-      if (/^https?:/.test(it.h)) { a.target = '_blank'; a.rel = 'noopener'; }
-      var s = d.createElement('span'); s.className = 'mono'; s.textContent = it.s;
+    var hits = idx.filter(function (it) { return terms.every(function (t) { return it.n.indexOf(t) > -1; }); })
+      .sort(function (a, b) { return (b.nt.indexOf(terms[0]) > -1) - (a.nt.indexOf(terms[0]) > -1); }).slice(0, 12);
+    if (!hits.length) { res.innerHTML = '<li class="sr-none">' + ((w.UI && w.UI.none) || '—') + '</li>'; return; }
+    hits.forEach(function (it) {
+      var li = d.createElement('li'), a = d.createElement('a');
+      a.href = it.h; if (/^https?:/.test(it.h)) { a.target = '_blank'; a.rel = 'noopener'; }
+      var s = d.createElement('span'); s.className = 's'; s.textContent = it.s;
       var t = d.createElement('span'); t.className = 'sr-t'; t.textContent = it.t;
-      a.appendChild(s); a.appendChild(t);
-      a.addEventListener('click', close);
+      a.appendChild(s); a.appendChild(t); a.addEventListener('click', close);
       li.appendChild(a); res.appendChild(li);
     });
   }
-  function open() {
-    if (!box) return;
-    last = d.activeElement;
-    box.hidden = false; d.body.classList.add('noscroll');
-    setTimeout(function () { inp.focus(); }, 30);
-  }
-  function close() {
-    if (!box || box.hidden) return;
-    box.hidden = true; d.body.classList.remove('noscroll');
-    if (last && last.focus) last.focus();
-  }
+  function open() { if (!box) return; last = d.activeElement; box.hidden = false; d.body.classList.add('noscroll'); setTimeout(function () { inp.focus(); }, 20); }
+  function close() { if (!box || box.hidden) return; box.hidden = true; d.body.classList.remove('noscroll'); if (last && last.focus) last.focus(); }
   [].forEach.call(d.querySelectorAll('[data-open-search]'), function (b) { b.addEventListener('click', open); });
   if (box) {
     box.querySelector('[data-close-search]').addEventListener('click', close);
@@ -80,11 +102,10 @@
     inp.addEventListener('input', function () { render(inp.value); });
     inp.addEventListener('keydown', function (ev) {
       if (ev.key === 'Enter') { var f = res.querySelector('a'); if (f) f.click(); }
-      if (ev.key === 'ArrowDown') { var f2 = res.querySelector('a'); if (f2) { ev.preventDefault(); f2.focus(); } }
+      if (ev.key === 'ArrowDown') { var g = res.querySelector('a'); if (g) { ev.preventDefault(); g.focus(); } }
     });
     res.addEventListener('keydown', function (ev) {
-      var a = d.activeElement; if (!a || a.tagName !== 'A') return;
-      var li = a.parentNode;
+      var a = d.activeElement; if (!a || a.tagName !== 'A') return; var li = a.parentNode;
       if (ev.key === 'ArrowDown' && li.nextElementSibling) { ev.preventDefault(); li.nextElementSibling.firstChild.focus(); }
       if (ev.key === 'ArrowUp') { ev.preventDefault(); (li.previousElementSibling ? li.previousElementSibling.firstChild : inp).focus(); }
     });

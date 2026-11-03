@@ -8,9 +8,9 @@ Victor Tseng 曾浩瑜 的個人網站（作者中心），三語：繁中 `/`�
 
 ## 怎麼更新
 
-網站由 `_src/` 裡的檔案產生（GitHub Pages 不會公開以底線開頭的資料夾）：
+網站由 `_src/` 產生（GitHub Pages 不會公開以底線開頭的資料夾）。改了 `_src/` 裡的檔案並推上 main 之後，GitHub Actions 會自動重建網站。
 
-- 改文字：`_src/content.py`（三語都在這裡）
-- 改樣式：`_src/site.css`、互動：`_src/site.js`
-- 產生網站：`cd _src && python3 build.py ..`
-- 新增一篇媒體文章：在三語的 `articles` 各加一筆（日期、媒體、標題、連結），只放索引，不放內文
+- **新增媒體露出**：編輯 `_src/data/press.json`，複製一筆，填日期、媒體名（三語）、標題（三語）、原文語言、網址。只放索引，不放內文。
+- **新增文章（現場筆記）**：在 `_src/notes/<網址代稱>/` 建立 `zh.md`（可再加 `en.md`、`fr.md`），開頭填 title、description、date、pillar、tags。想先存草稿不上線，就加一行 `draft: true`。
+- **改首頁文字**：`_src/content.py`（三語都在這裡）。
+- **本機重建**：`cd _src && pip install markdown && python3 build.py ..`
